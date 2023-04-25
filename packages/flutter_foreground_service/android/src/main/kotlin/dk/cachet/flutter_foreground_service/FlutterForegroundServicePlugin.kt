@@ -625,11 +625,12 @@ class FlutterForegroundServicePlugin: FlutterPlugin, MethodCallHandler, IntentSe
       try {
 
         newBuilder
-                .setContentTitle("無綫新聞")
-                .setContentText(appContentTitle)
-                .setOngoing(true)
-                .setOnlyAlertOnce(false)
-                .setSmallIcon(getHardcodedIconResourceId())
+          .setContentTitle("無綫新聞")
+          .setContentText(appContentTitle)
+          .setOngoing(true)
+          .setStyle(NotificationCompat.BigTextStyle())
+          .setOnlyAlertOnce(false)
+          .setSmallIcon(getHardcodedIconResourceId())
 
         //the "normal" setPriority method will try to rebuild/renotify
         //which of course isn't going to end well since the builder hasn't been set yet
