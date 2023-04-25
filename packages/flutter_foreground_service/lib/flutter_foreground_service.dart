@@ -12,9 +12,9 @@ import 'package:flutter/foundation.dart';
 part 'src/foreground_service_handler.dart';
 
 class ForegroundService {
-  void start() async {
+  void start({String title='', String contentText='', String subText='', String ticker=''}) async {
     if (Platform.isAndroid) {
-      _initForegroundService();
+      _initForegroundService(title: title, contentText: contentText, subText: subText, ticker: ticker);
     } else {
       debugPrint("Error: Can only use foreground services on Android!");
     }
@@ -28,10 +28,16 @@ class ForegroundService {
     }
   }
 
-  void _initForegroundService() async {
+  void _initForegroundService({String title='', String contentText='', String subText='', String ticker=''}) async {
     if (!(await ForegroundServiceHandler.foregroundServiceIsStarted())) {
       await ForegroundServiceHandler.setServiceIntervalSeconds(5);
-      await ForegroundServiceHandler.startForegroundService(_callback);
+      final args = {
+        'title': title,
+        'contentText': contentText,
+        'subText': subText,
+        'ticker': ticker,
+      };
+      await ForegroundServiceHandler.startForegroundService(_callback, false, args);
       await ForegroundServiceHandler.getWakeLock();
     }
 

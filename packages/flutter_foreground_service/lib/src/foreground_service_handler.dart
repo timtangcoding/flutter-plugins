@@ -19,6 +19,7 @@ class ForegroundServiceHandler {
     }
   }
 
+  /// Notification text
   static final ForegroundServiceNotification notification =
       new ForegroundServiceNotification._(_invokeMainChannel);
 
@@ -97,15 +98,18 @@ class ForegroundServiceHandler {
   /// communication of simple values between serviceFunction and the main app
   /// can be accomplished using setupIsolateCommunication & sendToPort
   static Future<void> startForegroundService(
-      [Function? serviceFunction, bool holdWakeLock = false]) async {
+      [Function? serviceFunction, bool holdWakeLock = false, Map? args]) async {
     //foreground service should only be started from the main isolate
     if (!(await isBackgroundIsolate)) {
       final setupHandle = PluginUtilities.getCallbackHandle(
               _setupForegroundServiceCallbackChannel)
           ?.toRawHandle();
 
+      if(args == null) {
+        args = {};
+      }
       await _invokeMainChannel(
-          "startForegroundService", <dynamic>[setupHandle, holdWakeLock]);
+          "startForegroundService", <dynamic>[setupHandle, holdWakeLock, args]);
 
 //      if (serviceFunction != null) {
 //        setServiceFunction(serviceFunction);

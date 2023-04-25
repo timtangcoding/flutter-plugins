@@ -49,6 +49,10 @@ class FlutterForegroundServicePlugin: FlutterPlugin, MethodCallHandler, IntentSe
     private var hasWakeLock: Boolean = false
     private lateinit var myWakeLock: PowerManager.WakeLock
 
+    private var appContentTitle = ""
+    private var appContentText = ""
+    private var isAppContentTextUpdated = false
+
     //put this in the companion object so doCallback can use it later
 
     private var mainChannel: MethodChannel? = null
@@ -160,6 +164,17 @@ class FlutterForegroundServicePlugin: FlutterPlugin, MethodCallHandler, IntentSe
 
               val callbackHandle = (call.arguments as JSONArray).getLong(0)
               shouldWakeLock = (call.arguments as JSONArray).getBoolean(1)
+              val params = (call.arguments as JSONArray).getJSONObject(2)
+              val contentTitleKey = "contentText"
+              if(params.has(contentTitleKey) && !params.isNull(contentTitleKey)) {
+                var newTitle = params.getString(contentTitleKey)
+                if(newTitle != null && !newTitle.equals(appContentTitle)) {
+                  appContentTitle = params.getString(contentTitleKey)
+                  isAppContentTextUpdated = true
+                } else {
+                  isAppContentTextUpdated = false
+                }
+              }
               setupCallback(myAppContext(), callbackHandle)
           }
 
@@ -422,6 +437,21 @@ class FlutterForegroundServicePlugin: FlutterPlugin, MethodCallHandler, IntentSe
     }
   }
 
+  override fun onTaskRemoved(rootIntent: Intent?) {
+
+    notificationHelper.serviceIsForegrounded = false
+    serviceIsStarted = false
+    maybeReleaseWakeLock()
+    stopForeground(true)
+    stopSelf()
+
+    val appNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    appNotificationManager.cancel(notificationHelper.notificationId)
+
+    super.onTaskRemoved(rootIntent)
+
+  }
+
   private fun maybeGetWakeLock(){
     if(shouldWakeLock && !hasWakeLock) {
       myWakeLock = (myAppContext().getSystemService(Context.POWER_SERVICE) as PowerManager)
@@ -445,6 +475,7 @@ class FlutterForegroundServicePlugin: FlutterPlugin, MethodCallHandler, IntentSe
       startForeground(notificationHelper.notificationId, notificationHelper.currentNotification)
       true
     }catch(e: Exception){
+      android.util.Log.d("AppCheck",  ">>> startForeground error ${e.message}")
       logError("error while launching foreground service: ${e.message}")
       false
     }
@@ -533,8 +564,8 @@ class FlutterForegroundServicePlugin: FlutterPlugin, MethodCallHandler, IntentSe
     private var currentNotificationInternal: Notification? = null
     val currentNotification: Notification
       get(){
-        if(currentNotificationInternal == null){
-          currentNotificationInternal = builder.build()
+        if(currentNotificationInternal == null || isAppContentTextUpdated){
+          currentNotificationInternal = builder.setContentText(appContentTitle).build()
         }
         return currentNotificationInternal!!
       }
@@ -560,8 +591,8 @@ class FlutterForegroundServicePlugin: FlutterPlugin, MethodCallHandler, IntentSe
     //so don't notify until this flag is set
     var serviceIsForegrounded = false
     private fun maybeUpdateNotification(){
-      if(!editModeEnabled) {
-        currentNotificationInternal = builder.build()
+      if(!editModeEnabled || isAppContentTextUpdated) {
+        currentNotificationInternal = builder.setContentText(appContentTitle).build()
       }
     }
 
@@ -569,7 +600,7 @@ class FlutterForegroundServicePlugin: FlutterPlugin, MethodCallHandler, IntentSe
     //you can only use built-in stuff, instead of being able to incorporate things at run-time
     //doesn't seem like there's much point in exposing it
     //so just hardcode the expected icon location
-    private val hardcodedIconName = "ic_launcher"
+    private val hardcodedIconName = "notification_icon"
 
     private fun getHardcodedIconResourceId(): Int =
       myAppContext().resources.getIdentifier(
@@ -594,8 +625,8 @@ class FlutterForegroundServicePlugin: FlutterPlugin, MethodCallHandler, IntentSe
       try {
 
         newBuilder
-                .setContentTitle("Foreground Service")
-                .setContentText("Running")
+                .setContentTitle("無綫新聞")
+                .setContentText(appContentTitle)
                 .setOngoing(true)
                 .setOnlyAlertOnce(false)
                 .setSmallIcon(getHardcodedIconResourceId())
